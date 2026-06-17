@@ -766,13 +766,18 @@ if runner is not None and runner.completed:
                 type="primary",
                 key=f"pdf_{res['parceiro']}",
             )
-            
-            # Visualizador PDF embutido na tela (tamanho aumentado em 20% -> 960px)
-            import base64
-            pdf_bytes = res["pdf_path"].read_bytes()
-            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="960" style="border: 1px solid #1f2937; border-radius: 8px; margin-bottom: 20px;" type="application/pdf"></iframe>'
-            st.markdown(pdf_display, unsafe_allow_html=True)
+            # ── Preview do Relatório usando streamlit-pdf-viewer ──
+            # Esta biblioteca renderiza o PDF internamente sem depender do leitor do Chrome,
+            # evitando o bloqueio de segurança de iframes cross-origin.
+            try:
+                from streamlit_pdf_viewer import pdf_viewer
+                
+                with st.container():
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    st.info("💡 **Preview do Relatório:** Abaixo está a visualização do PDF gerado.", icon="👀")
+                    pdf_viewer(str(res["pdf_path"]), width=1200, height=800)
+            except ImportError:
+                st.warning("O pacote `streamlit-pdf-viewer` não está instalado. Faça o download acima para ver o PDF.")
         else:
             st.error("PDF não gerado — WeasyPrint não disponível.")
 
