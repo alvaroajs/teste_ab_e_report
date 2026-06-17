@@ -522,7 +522,7 @@ class PipelineRunner(threading.Thread):
                 })
 
                 if len(self.uploaded_files) > 1 and uf != self.uploaded_files[-1]:
-                    for _ in range(50):
+                    for _ in range(150):
                         if self.cancelled: break
                         time.sleep(0.1)
 

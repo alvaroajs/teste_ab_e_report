@@ -39,10 +39,13 @@ from config import OUTPUTS_DIR
 
 DEFAULT_MODEL       = "gemini-2.5-flash"
 DEFAULT_TEMPERATURE = 0.3
-MAX_RETRIES         = 3
-RETRY_DELAY_S       = 8
+MAX_RETRIES         = 5
+RETRY_DELAY_S       = 25
 PROMPT_TEMPLATE_PATH = ROOT_DIR / "prompts" / "prompt_gemini.md"
 REPORTS_OUT_DIR      = ROOT_DIR / "reports" / "gemini"
+
+# Tracking para evitar Too Many Requests na API gratuita
+LAST_GEMINI_CALL_TIME = 0.0
 
 logger = logging.getLogger(__name__)
 
@@ -250,6 +253,14 @@ def call_gemini(
         ],
     )
 
+    global LAST_GEMINI_CALL_TIME
+    now = time.time()
+    time_since_last = now - LAST_GEMINI_CALL_TIME
+    if time_since_last < 15.0:
+        sleep_time = 15.0 - time_since_last
+        logger.info("Aguardando %.1fs para respeitar limite de requisições (rate-limit preventivo)...", sleep_time)
+        time.sleep(sleep_time)
+
     last_error: Exception | None = None
 
     current_model = model_name
@@ -283,6 +294,7 @@ def call_gemini(
                 "✅ Resposta recebida em %.1fs (%d caracteres).",
                 elapsed, len(response.text),
             )
+            LAST_GEMINI_CALL_TIME = time.time()
             return response.text
 
         except genai_errors.ClientError as e:
@@ -290,12 +302,6 @@ def call_gemini(
             err_str  = str(e)
 
             if status == 429:
-                if "limit: 0" in err_str or "free_tier" in err_str.lower():
-                    raise EnvironmentError(
-                        "❌ Chave sem cota no free tier (limit: 0) contate o adiministrador.\n"
-                        "   Crie uma nova chave em https://aistudio.google.com/app/apikey\n"
-                        "   Clique em 'Create API key in new project'."
-                    ) from e
                 wait = RETRY_DELAY_S * attempt
                 logger.warning(
                     "⚠️  Rate limit (tentativa %d/%d). Aguardando %ds…",
