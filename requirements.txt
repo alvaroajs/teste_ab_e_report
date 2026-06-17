@@ -1,0 +1,22 @@
+# ─── Pipeline de Análise A/B ───────────────────────────────────
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+statsmodels>=0.14.0
+matplotlib>=3.7.0
+openpyxl>=3.1.0
+
+# ─── Geração de Relatórios com Gemini ─────────────────────────
+google-genai>=1.0.0
+python-dotenv>=1.0.0
+
+# ─── Interface Web ────────────────────────────────────────────
+streamlit>=1.35.0
+
+# ─── Conversão Markdown → PDF ─────────────────────────────────
+markdown>=3.5.0          # Converte Markdown em HTML
+weasyprint>=61.0         # HTML → PDF (melhor qualidade)
+                         # Requer libs do sistema (ver README)
+
+# ─── Alternativa PDF (instale apenas se WeasyPrint não funcionar) ───
+# pdfkit>=1.0.0          # Requer wkhtmltopdf instalado no sistema
