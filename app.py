@@ -457,8 +457,19 @@ class PipelineRunner(threading.Thread):
                         from src.gsheets_logger import log_test_result, upload_pdf_to_drive
                         from datetime import datetime
                         
+                        folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+                        try:
+                            import streamlit as st
+                            if not folder_id and "GOOGLE_DRIVE_FOLDER_ID" in st.secrets:
+                                folder_id = st.secrets["GOOGLE_DRIVE_FOLDER_ID"]
+                        except Exception:
+                            pass
+                        
                         pdf_link = ""
-                        if pdf_ok and os.getenv("GOOGLE_DRIVE_FOLDER_ID"):
+                        if pdf_ok and folder_id:
+                            # Passa a usar o folder_id na chamada se precisasse, mas o gsheets_logger usa o env
+                            # Para forçar o gsheets_logger a enxergar, jogamos pro os.environ
+                            os.environ["GOOGLE_DRIVE_FOLDER_ID"] = folder_id
                             pdf_link = upload_pdf_to_drive(str(pdf_path), credentials_path)
                         
                         grupo_controle = summary.get("metadata", {}).get("grupo_controle", "Grupo 1")
