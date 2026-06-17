@@ -816,19 +816,7 @@ if runner is not None and runner.completed:
 </ul>
 </div>
         """
-        st.markdown(summary_md, unsafe_allow_html=True)
         
-        # --- SEÇÃO DO GOOGLE SHEETS ---
-        st.markdown("#### Registro de Acompanhamento (Google Sheets)")
-        if os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"):
-            if res.get("planilha_url"):
-                st.success("✅ Teste registrado automaticamente na planilha de acompanhamento.")
-                st.link_button("Ver planilha de acompanhamento", url=res["planilha_url"], type="secondary", use_container_width=True)
-            else:
-                st.warning("⚠️ O teste não pôde ser registrado. Verifique os logs para mais detalhes.")
-        else:
-            st.info("ℹ️ **Dica:** O registro automático no Google Sheets está disponível. Configure a variável `GOOGLE_SERVICE_ACCOUNT_JSON` no seu arquivo `.env` ou nas Secrets do Streamlit.")
-
         st.divider()
 
    
