@@ -432,9 +432,9 @@ class PipelineRunner(threading.Thread):
 
                 parts = p_json.split(' ')
                 if len(parts) == 2 and parts[0].lower() == "parceiro":
-                    pdf_filename = f"relatori_parceiro_{parts[1]}.pdf"
+                    pdf_filename = f"relatorio_parceiro_{parts[1]}.pdf"
                 else:
-                    pdf_filename = f"relatori_{p_json.lower().replace(' ', '_')}.pdf"
+                    pdf_filename = f"relatorio_{p_json.lower().replace(' ', '_')}.pdf"
                 pdf_path = REPORTS_DIR / pdf_filename
                 pdf_ok   = markdown_to_pdf(md_report, pdf_path, p_json)
 
@@ -721,6 +721,18 @@ Separador: `,` ou `;` · Grupo controle: **Grupo 1** · Um CSV por parceiro.
 # ══════════════════════════════════════════════════════════════════════════════
 # ÁREA PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
+
+st.markdown(
+    """
+    <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; margin-top: -30px;">
+        <a href="https://docs.google.com/spreadsheets/d/16mc0DiY_T4XXVXHuKi_ui82lbvDVAamtnTUt3mGWqQU/edit?gid=0#gid=0" target="_blank" style="text-decoration: none; color: #60a5fa; font-size: 0.95rem; font-weight: 600;">📊 Planilha de Resultados</a>
+        <span style="color: #4b5563;">|</span>
+        <a href="https://drive.google.com/drive/folders/1Rwafm-vzCGXtpKbYVLjxNkNWj2nQPAxf?hl=pt-br" target="_blank" style="text-decoration: none; color: #60a5fa; font-size: 0.95rem; font-weight: 600;">📁 Pasta do Google Drive</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 runner = st.session_state.get("pipeline_runner", None)
 
 

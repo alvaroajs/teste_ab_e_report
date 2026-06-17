@@ -1,381 +1,171 @@
-# Pipeline de Análise de Testes A/B — Plataforma de Cashback
+# Pipeline de Análise de Testes A/B e Geração de Relatórios
 
-> Motor estatístico completo para processar dados de Testes A/B de parceiros de cashback, com geração de gráficos de séries temporais, exportação de relatórios em CSV/Excel e, opcionalmente, criação de **relatórios executivos em PDF** escritos por IA via Google Gemini.
+Este projeto é um pipeline completo que automatiza a análise estatística de testes A/B, extrai insights utilizando Inteligência Artificial e gera relatórios executivos em PDF. Além do processamento robusto de dados, o sistema possui integração nativa na nuvem, exportando os PDFs diretamente para o Google Drive e registrando o histórico de análises em uma planilha no Google Sheets.
 
----
+## Acessos Rápidos
 
-## ⚡ Interface Web Interativa (Streamlit)
+Se você quiser ver o projeto funcionando de imediato, sem precisar instalar ou rodar código localmente, acesse os links abaixo:
 
-O projeto conta com uma interface gráfica moderna e amigável desenvolvida em **Streamlit**. Ela permite fazer upload dos CSVs de parceiros diretamente no seu navegador, acompanhar o progresso das etapas em tempo real e baixar os arquivos compilados (PDFs gerados pela IA, CSVs de estatísticas e gráficos) sem precisar interagir com o terminal.
+- 🌐 **Aplicação Web (Streamlit):** [https://reportt.streamlit.app/](https://reportt.streamlit.app/)
+- 📊 **Planilha de Acompanhamento (Google Sheets):** [Acessar Planilha](https://docs.google.com/spreadsheets/d/16mc0DiY_T4XXVXHuKi_ui82lbvDVAamtnTUt3mGWqQU/edit?gid=0#gid=0)
+- 📁 **Arquivos Gerados (Google Drive):** [Ver Relatórios PDF](https://drive.google.com/drive/folders/1Rwafm-vzCGXtpKbYVLjxNkNWj2nQPAxf?hl=pt-br)
 
-### 🌐 Acesse a Aplicação Online
-A versão implantada e pronta para uso em produção está disponível em:  
-**👉 [https://reportt.streamlit.app/](https://reportt.streamlit.app/)**
+## Sobre a Arquitetura
 
----
+Este projeto foi desenhado com um foco claro na separação de responsabilidades. Todo o processamento de dados e os cálculos estatísticos (como p-value, significância e intervalos de confiança) ocorrem de forma local e determinística. Vale destacar que **o motor estatístico do pipeline foi construído "na raça", utilizando puramente Pandas e SciPy**, em vez de recorrer à geração de código ou cálculos delegados à IA. O objetivo é demonstrar fundamentos sólidos de engenharia de software e análise de dados.
 
-## O que esse projeto faz?
+A API do Gemini entra em cena apenas na última etapa do fluxo: ela recebe os resultados exatos e pré-calculados, focando-se naquilo em que a IA generativa realmente brilha — interpretar os números, redigir um parecer executivo claro e gerar a estrutura HTML que será posteriormente convertida em um relatório PDF elegante por meio do WeasyPrint.
 
-O pipeline funciona em duas etapas independentes:
+## Como executar o projeto localmente
 
-### 1. Análise Estatística (sempre executada)
+Quer testar o código na sua máquina? É muito simples! Siga este passo a passo:
 
-Para cada arquivo CSV de parceiro encontrado na pasta `datasets/`, o pipeline:
+### 1. Preparar o Ambiente Virtual
 
-1. **Lê e limpa os dados** — converte valores monetários em BRL, remove linhas inválidas, detecta inconsistências e gera alertas.
-2. **Calcula estatísticas descritivas** — média, mediana, desvio padrão, quartis, skewness, kurtosis e mais.
-3. **Executa testes de hipótese** — Teste T de Welch, Mann-Whitney U, Shapiro-Wilk, Cohen's d e Intervalo de Confiança de 95%.
-4. **Gera gráficos de séries temporais** — evolução das métricas principais (lucro, vendas, compradores, ROI) ao longo do tempo, separadas por grupo. Também gera um heatmap de p-values.
-5. **Exporta os resultados** — CSVs por parceiro, JSON completo com todos os dados e uma planilha Excel consolidada com todos os parceiros.
+Recomendo fortemente a criação de um ambiente virtual para isolar as dependências deste projeto das demais bibliotecas do seu sistema, garantindo que tudo rode sem conflitos.
 
-### 2. Relatório Executivo com IA (opcional, requer chave Gemini)
-
-Quando a flag `--gemini` é usada, o pipeline envia os resultados da análise para o Google Gemini e recebe um **relatório executivo completo em PDF**, com narrativa profissional, interpretação dos testes estatísticos e os gráficos embutidos diretamente no documento.
-
----
-
-## Estrutura do Projeto
-
-```
-Teste_A_B/
-│
-├── datasets/                       ← Coloque seus CSVs aqui
-│
-├── outputs/                        ← CSVs e JSONs gerados por parceiro
-│   ├── parceiro_a_estatisticas_descritivas.csv
-│   ├── parceiro_a_testes_hipotese.csv
-│   └── parceiro_a_resumo_completo.json
-│
-├── reports/                        ← Relatórios consolidados e PDFs
-│   ├── consolidado_descritivo.csv
-│   ├── consolidado_hipoteses.csv
-│   ├── consolidado_resumo.xlsx
-│   └── gemini/
-│       └── relatorio_executivo_parceiro_a.pdf
-│
-├── charts/                         ← Gráficos PNG gerados
-│   ├── parceiro_a_linha_lucro.png
-│   ├── parceiro_a_linha_vendas_totais.png
-│   └── parceiro_a_heatmap_pvalues.png
-│
-├── logs/
-│   └── pipeline.log
-│
-├── prompts/
-│   └── prompt_gemini.md            ← Template do prompt enviado ao Gemini
-│
-├── src/
-│   ├── analysis.py                 ← Pré-processamento e limpeza
-│   ├── statistics.py               ← Motor estatístico (descritiva + inferência)
-│   ├── visualizations.py           ← Gráficos de série temporal e heatmap
-│   ├── reporting.py                ← Exportação CSV + JSON
-│   ├── sheets.py                   ← Consolidação cross-parceiro + Excel
-│   ├── gemini_report.py            ← Geração de PDFs via Google Gemini
-│   └── main.py                     ← Orquestrador principal
-│
-├── config.py                       ← Configurações centrais
-├── .env.example                    ← Modelo do arquivo de variáveis de ambiente
-├── .env                            ← Suas credenciais reais (NÃO commitar!)
-├── requirements.txt
-└── README.md
-```
-
----
-
-## Instalação
-
-### Pré-requisitos
-- Python 3.10 ou superior
-
-### 1. Clone o repositório
-
+Abra o seu terminal e crie o ambiente virtual com o seguinte comando:
 ```bash
-git clone https://github.com/alvaroajs/teste_ab_e_report.git
-cd teste_ab_e_report
+python -m venv venv
 ```
 
-### 2. Instalação com uma única linha (Recomendado)
+Em seguida, ative-o:
+- No **Linux/macOS**:
+  ```bash
+  source venv/bin/activate
+  ```
+- No **Windows**:
+  ```bash
+  venv\Scripts\activate
+  ```
 
-Crie o ambiente virtual, ative e instale todas as dependências rodando apenas um comando:
+### 2. Instalar as Dependências
 
-**Para Linux e macOS:**
+Com o ambiente ativado, instale todas as bibliotecas necessárias de uma só vez:
 ```bash
-python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-**Para Windows (Prompt de Comando):**
-```cmd
-python3 -m venv venv && venv\Scripts\activate && pip install -r requirements.txt
+### 3. Configurar as Variáveis de Ambiente
+
+O projeto precisa se comunicar com a IA do Google para redigir o relatório, além de utilizar as credenciais para acessar o Google Sheets e Google Drive. Crie um arquivo chamado `.env` na raiz do repositório e adicione suas credenciais da seguinte forma:
+
+```env
+GEMINI_API_KEY=sua_chave_aqui <------------------------
+
+# Credenciais e configurações do Google Workspace coloque desse jeito
+GOOGLE_SERVICE_ACCOUNT_JSON=credenciais.json
+GOOGLE_DRIVE_FOLDER_ID=1Rwafm-vzCGXtpKbYVLjxNkNWj2nQPAxf
+GOOGLE_CLIENT_SECRET_JSON=client_secret.json
+GOOGLE_TOKEN_JSON=token.json
 ```
 
-> **Nota:** Após a execução, o ambiente virtual (`venv`) já estará ativado no seu terminal.
+> **Aviso Importante sobre Credenciais:** Por motivos óbvios de segurança, os arquivos JSON mencionados acima (`credenciais.json`, etc.) não foram enviados para o GitHub. **A ausência deles não quebra o projeto!** Se você rodar localmente apenas com a chave do Gemini, o pipeline fará todas as análises e gerará o PDF normalmente na sua máquina, pulando de forma silenciosa apenas a etapa de upload para o Sheets e Drive.
 
----
+### 3.1. Como habilitar a exportação para o Google Sheets e Drive (Opcional)
 
-## Como Usar
+Se você quiser testar a exportação completa dos resultados para a nuvem, precisará gerar as suas próprias credenciais OAuth 2.0 no Google Cloud:
 
-### Rodar a análise completa (sem IA)
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/).
+2. Crie um novo projeto e ative as APIs: **Google Sheets API** e **Google Drive API**.
+3. No menu lateral, acesse **APIs e Serviços > Credenciais**.
+4. Clique em **Criar Credenciais > ID do Cliente OAuth** (Escolha o tipo **Aplicativo de Computador / Desktop App**).
+5. Baixe o arquivo JSON gerado, renomeie para `client_secret.json` e coloque na raiz do projeto. O formato do arquivo será parecido com este:
 
-Processa todos os CSVs da pasta `datasets/` e gera os outputs estatísticos:
-
-```bash
-python3 src/main.py
+```json
+{
+  "installed": {
+    "client_id": "SEU_CLIENT_ID.apps.googleusercontent.com",
+    "project_id": "nome-do-seu-projeto",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "SEU_CLIENT_SECRET",
+    "redirect_uris": ["http://localhost"]
+  }
+}
 ```
 
-### Rodar apenas um arquivo específico
+6. Configure o `.env` com a variável `GOOGLE_DRIVE_FOLDER_ID` apontando para o ID da pasta do Drive onde você quer salvar os PDFs.
+7. Na primeira vez que você rodar o projeto (seja via CLI ou Streamlit), o seu navegador abrirá pedindo para fazer login com o Google e autorizar os acessos. Após o login, o projeto criará automaticamente o arquivo `token.json` e fará os uploads futuros sem precisar perguntar novamente!
 
-```bash
-python3 src/main.py --file datasets/dataset_01_parceiroA.csv
-```
+### 4. Executar a Aplicação
 
-### Rodar com geração de relatório PDF pelo Gemini
+Você tem duas formas de rodar o projeto, dependendo da sua preferência:
 
-```bash
-python3 src/main.py --gemini
-```
-
-> **Atenção:** para usar esta opção, você precisa configurar sua chave de API do Google Gemini. Veja a seção abaixo.
-
-### Outras opções
-
-```bash
-# Processar CSVs de uma pasta customizada
-python3 src/main.py --dir /caminho/para/seus/dados
-
-# Ativar logs detalhados
-python3 src/main.py --log DEBUG
-
-# Usar o gerador de relatórios de forma standalone
-python3 src/gemini_report.py --all
-python3 src/gemini_report.py --json outputs/parceiro_a_resumo_completo.json
-```
-
-### Rodar a interface web interativa (Streamlit) localmente
-
-Para rodar a interface gráfica localmente no seu computador, execute o comando:
-
+**Para usar a Interface Gráfica (Web App):**
+A forma mais visual e interativa de testar é através da aplicação desenvolvida em Streamlit. No terminal, execute:
 ```bash
 streamlit run app.py
 ```
 
-O Streamlit irá carregar o aplicativo em segundo plano e abrir a página automaticamente no seu navegador padrão no endereço `http://localhost:8501`. Nela você pode fazer o upload dos CSVs de parceiros, visualizar gráficos interativos e fazer o download de todos os relatórios gerados de forma visual.
-
----
-
-## Configurando a API do Google Gemini
-
-O relatório executivo em PDF é gerado pelo **Google Gemini 2.5 Flash** via API. O uso é **gratuito** dentro dos limites da cota do Google AI Studio.
-
-### Passo 1 — Obtenha sua chave de API
-
-1. Acesse [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-2. Clique em **"Create API key in new project"** para criar uma chave vinculada a um projeto novo (isso garante que você terá cota gratuita disponível)
-3. Copie a chave gerada — ela terá o formato `AIzaSy...` ou similar
-
-> **Importante:** Crie sempre uma chave em um **projeto novo**. Chaves de projetos antigos podem ter cota zerada ou configurações diferentes.
-
-### Passo 2 — Configure o arquivo `.env`
-
-Na raiz do projeto existe um arquivo `.env.example` com o formato esperado:
-
-```env
-# Copie este arquivo para .env e preencha com sua chave real:
-#   cp .env.example .env
-
-# ─── Google Gemini API ─────────────────────────────────────────
-GEMINI_API_KEY=sua_chave_aqui
-
-# ─── (Opcional) Modelo padrão ──────────────────────────────────
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-Crie seu próprio `.env` a partir do exemplo:
-
+**Para executar a versão CLI (Linha de Comando):**
+Caso prefire uma abordagem mais direta via terminal, você pode rodar o script principal:
 ```bash
-cp .env.example .env
+python src/main.py
 ```
 
-Abra o arquivo `.env` e substitua `sua_chave_aqui` pela chave que você copiou:
+## Estrutura do Projeto
 
-```env
-GEMINI_API_KEY=AIzaSyAbCdEfGhIjKlMnOpQrSt...
+```text
+Teste_A_B/
+│
+├── datasets/                       ← Coloque os seus arquivos CSV de input aqui!
+│
+├── outputs/                        ← CSVs e JSONs gerados pela análise local
+├── reports/                        ← Relatórios consolidados e PDFs finais
+├── charts/                         ← Gráficos PNG gerados localmente
+├── src/                            ← Código fonte do motor estatístico e integrações
+├── app.py                          ← Interface gráfica (Streamlit)
+├── .env                            ← Suas credenciais da IA e Google Workspace
+├── requirements.txt
+└── README.md
 ```
 
-### Passo 3 — Pronto!
+## Formato dos Dados de Entrada
 
-O arquivo `.env` é carregado automaticamente pelo pipeline. Ele está no `.gitignore` e **nunca será commitado** — suas credenciais ficam apenas na sua máquina.
+Os arquivos CSV que você colocar na pasta `datasets/` devem conter as seguintes 7 colunas obrigatórias:
 
-```bash
-# Agora você pode rodar localmente com suporte ao Gemini:
-python3 src/main.py --gemini
-```
-
-### Passo 4 — Configuração de segredos no Streamlit Cloud (Para Deploy)
-
-Ao colocar a aplicação no ar na nuvem do Streamlit, adicione a sua chave de API nas **Secrets** da plataforma:
-1. No painel de controle do Streamlit Cloud, acesse as configurações (**Settings**) da sua aplicação implantada.
-2. Navegue até a seção **Secrets**.
-3. Adicione a variável de ambiente no formato TOML:
-   ```toml
-   GEMINI_API_KEY = "sua_chave_aqui_AIzaSy..."
-   ```
-4. Salve as modificações. O app passará a usar a chave configurada automaticamente e de forma segura.
-
----
-
-## Configurando o Google Sheets
-
-O pipeline permite registrar os resultados de cada análise automaticamente em uma planilha pública no Google Sheets ("Méliuz — Acompanhamento Testes A/B").
-
-### Passo 1 — Crie uma Service Account no Google Cloud Console
-
-1. Acesse o [Google Cloud Console](https://console.cloud.google.com/).
-2. Crie um novo projeto ou selecione um existente.
-3. No menu de navegação, vá em **APIs e Serviços** > **Biblioteca**. Pesquise por "Google Sheets API" e "Google Drive API" e ative ambas.
-4. Vá em **APIs e Serviços** > **Credenciais**.
-5. Clique em **Criar Credenciais** e selecione **Conta de Serviço (Service Account)**.
-6. Preencha os dados e conclua a criação.
-
-### Passo 2 — Baixe o JSON de credenciais
-
-1. Na lista de Service Accounts, clique na conta que você acabou de criar.
-2. Vá na aba **Chaves** (Keys).
-3. Clique em **Adicionar chave** > **Criar nova chave**.
-4. Selecione o tipo **JSON** e clique em **Criar**. O download do arquivo começará automaticamente.
-
-### Passo 3 — Configure a variável no `.env`
-
-Copie o arquivo baixado para a raiz do seu projeto (ou para um local seguro). Em seguida, no seu arquivo `.env`, adicione a seguinte variável apontando para o arquivo:
-
-```env
-GOOGLE_SERVICE_ACCOUNT_JSON=caminho/para/seu/arquivo-de-credenciais.json
-```
-
-### Passo 4 — Configuração no Streamlit Cloud (Secrets)
-
-Para uso online, em vez de subir o arquivo de credenciais (que por padrão está no `.gitignore`), você pode adicionar o JSON inteiro como uma string na variável no Streamlit Cloud.
-1. No seu app do Streamlit Cloud, vá em **Settings** > **Secrets**.
-2. Cole todo o conteúdo do JSON como uma string (uma única linha, escapando as aspas duplas, ou formatando o TOML adequadamente) para a variável correspondente:
-   ```toml
-   GOOGLE_SERVICE_ACCOUNT_JSON = '{"type": "service_account", "project_id": "..."}'
-   ```
-   > Outra alternativa suportada é criar o dicionário/json de forma embutida.
-
-### O que acontece quando não está configurado?
-
-Se a variável `GOOGLE_SERVICE_ACCOUNT_JSON` não for encontrada, o **pipeline continua normalmente** sem gerar logs de erro críticos. Apenas não será feita a inclusão da linha no Google Sheets. No aplicativo Web (Streamlit), aparecerá uma mensagem informativa lembrando da possibilidade de registrar a análise.
-
----
-
-## Schema dos Dados de Entrada
-
-O CSV deve ter as seguintes colunas:
-
-| Coluna | Tipo | Exemplo |
-|---|---|---|
-| `Data` | YYYY-MM-DD | `2011-01-01` |
-| `Grupos de usuários` | string | `Grupo 1` |
-| `Parceiro` | string | `Parceiro A` |
-| `compradores` | int | `196` |
-| `comissão` | string (BRL) | `R$ 10.273` ou `R$ 2.911,50` |
-| `cashback` | string (BRL) | `R$ 3.267` |
-| `vendas totais` | string (BRL) | `R$ 93.390` |
-
----
-
-## Outputs Gerados
-
-### Por Parceiro (pasta `outputs/`)
-
-| Arquivo | Descrição |
+| Coluna | Formato/Exemplo |
 |---|---|
-| `[parceiro]_estatisticas_descritivas.csv` | Soma, média, mediana, std, CV, quartis, skewness, kurtosis |
-| `[parceiro]_testes_hipotese.csv` | Teste T, Mann-Whitney, Cohen's d, IC 95%, Uplift |
-| `[parceiro]_resumo_completo.json` | JSON completo com todos os dados, usado como input do Gemini |
+| `Data` | `YYYY-MM-DD` (Ex: `2023-01-01`) |
+| `Grupos de usuários` | Texto indicando o grupo (Ex: `Grupo 1`, `Grupo 2`) |
+| `Parceiro` | Texto identificando o parceiro/campanha |
+| `compradores` | Inteiro numérico |
+| `comissão` | Monetário BRL (Ex: `R$ 10.273,50`) |
+| `cashback` | Monetário BRL |
+| `vendas totais` | Monetário BRL |
 
-### Gráficos (pasta `charts/`)
+> **Dica:** O pipeline aceita separadores por vírgula `,` ou ponto e vírgula `;`. O grupo base de controle está fixado no código como **Grupo 1**.
 
-| Arquivo | Descrição |
-|---|---|
-| `[parceiro]_linha_[metrica].png` | Evolução temporal da métrica por grupo ao longo dos dias |
-| `[parceiro]_heatmap_pvalues.png` | Heatmap de p-values: visão geral de significância por grupo × métrica |
+## Como o Pipeline Funciona (Fluxo de Execução)
 
-### Consolidados (pasta `reports/`)
+A aplicação processa tudo em etapas lógicas e bem delimitadas:
 
-| Arquivo | Descrição |
-|---|---|
-| `consolidado_descritivo.csv` | Todos os parceiros — descritivo unificado |
-| `consolidado_hipoteses.csv` | Todos os parceiros — hipóteses unificadas |
-| `consolidado_resumo.xlsx` | Excel multi-aba com descritivo, hipóteses e pivot KPI |
-| `gemini/relatorio_executivo_[parceiro].pdf` | Relatório executivo em PDF gerado pelo Gemini (se `--gemini` usado) |
+1. **Carregamento e Limpeza (Data Prep):** Validação dos dados brutos, remoção de caracteres de moeda (BRL) e transformação para floats. Valores anômalos geram alertas automáticos.
+2. **Estatísticas Descritivas:** O motor calcula métricas como média, mediana, desvio padrão, CV% e quartis por cada grupo.
+3. **Testes de Hipótese (Inferência):** Execução rigorosa do Teste T de Welch (robusto para variâncias desiguais) e Mann-Whitney U, validando a significância estatística do A/B e o *uplift* entre os grupos.
+4. **Visualização:** Geração de gráficos temporais comparando as métricas principais ao longo dos dias, e heatmaps para ilustrar os *p-values*.
+5. **Geração do Relatório Executivo (IA):** Os números matemáticos puros e consolidados são enviados ao Google Gemini, que interpreta a significância dos resultados e redige uma narrativa. O texto é mesclado aos gráficos e convertido para um PDF final via WeasyPrint.
+6. **Integração Cloud:** O PDF é automaticamente upado no Google Drive e a conclusão matemática é guardada em uma linha no Google Sheets.
 
----
-
-## Métricas Analisadas
-
-| Métrica | Origem |
-|---|---|
-| `compradores` | Dados brutos |
-| `vendas_totais` | GMV — dados brutos |
-| `comissao` | Dados brutos |
-| `cashback` | Dados brutos |
-| `lucro` | `comissão - cashback` |
-| `roi_cashback` | `vendas_totais / cashback` |
-| `ticket_medio` | `vendas_totais / compradores` |
+E pronto! Fique à vontade para explorar, testar com os seus próprios CSVs, sugerir melhorias ou entrar em contato caso tenha alguma dúvida! 🚀
 
 ---
 
-## Estatísticas Calculadas
+## Autor
 
-### Descritivas
-- Soma, Média, Mediana, Desvio Padrão, Variância, CV%
-- Mínimo, Máximo, Amplitude
-- Q1 (25%), Q2 (50%), Q3 (75%), IQR
-- Skewness (assimetria), Kurtosis (curtose — Fisher)
+Este projeto foi desenvolvido por **Álvaro Silva** Fico à disposição para dúvidas, sugestões ou colaborações. Sinta-se à vontade para entrar em contato!
 
-### Inferenciais (variante vs. Grupo Controle)
-- **Teste T de Welch** — robusto a variâncias desiguais
-- **Mann-Whitney U** — não-paramétrico, sem assumir normalidade
-- **Shapiro-Wilk** — teste de normalidade por grupo
-- **Cohen's d** — tamanho de efeito (negligível / pequeno / médio / grande)
-- **IC 95%** — intervalo de confiança para a diferença das médias
-- **Uplift absoluto e relativo %**
+<a href="https://www.linkedin.com/in/alvarosilvamg/" target="_blank">
+  <img align="center" height="28px" src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white"/>
+</a>&nbsp;&nbsp;
+<a href="https://github.com/alvaroajs" target="_blank">
+  <img align="center" height="28px" src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white"/>
+</a>
 
----
+<br>
 
-## Configurações
-
-Edite `config.py` para personalizar o comportamento do pipeline:
-
-```python
-ALPHA = 0.05              # Nível de significância dos testes
-CONTROL_GROUP = "Grupo 1" # Nome do grupo controle nos dados
-MIN_OBSERVATIONS = 5      # Mínimo de observações para rodar os testes
-CHART_DPI = 150           # Resolução (DPI) dos gráficos exportados
-CSV_SEPARATOR = ";"       # Separador dos CSVs de saída
-```
-
----
-
-## Dependências Principais
-
-| Pacote | Uso |
-|---|---|
-| `pandas` | Manipulação de dados |
-| `numpy` | Computação numérica |
-| `scipy` | Testes estatísticos |
-| `matplotlib` | Geração de gráficos |
-| `openpyxl` | Export Excel |
-| `google-genai` | Integração com a API do Gemini |
-| `weasyprint` | Conversão de HTML/Markdown para PDF |
-| `markdown` | Parsing do Markdown gerado pelo Gemini |
-| `python-dotenv` | Carregamento do arquivo `.env` |
-
----
-
-## Logs
-
-O pipeline gera logs detalhados em `logs/pipeline.log`, incluindo:
-- Alertas de qualidade de dados (valores negativos, nulos, codificação)
-- Progresso de cada etapa por parceiro
-- Erros com stack trace completo
+<a style="color:black" href="mailto:alvaro.ajsilva@gmail.com?subject=[GitHub]%20Projeto%20Pipeline%20A/B">
+✉️ <i>alvaro.ajsilva@gmail.com</i>
+</a>

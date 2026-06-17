@@ -631,9 +631,9 @@ def process_json_file(
 
         parts = parceiro.split(' ')
         if len(parts) == 2 and parts[0].lower() == "parceiro":
-            pdf_filename = f"relatori_parceiro_{parts[1]}.pdf"
+            pdf_filename = f"relatorio_parceiro_{parts[1]}.pdf"
         else:
-            pdf_filename = f"relatori_{slug}.pdf"
+            pdf_filename = f"relatorio_{slug}.pdf"
         pdf_path = out_dir / pdf_filename
         pdf_ok = False
 

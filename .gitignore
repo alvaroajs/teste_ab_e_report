@@ -36,3 +36,5 @@ test_api_key.py
 temp_datasets/
 
 *.sh
+check_sheet.py
+fix_sheet.py
