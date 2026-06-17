@@ -147,6 +147,9 @@ def run_pipeline_for_file(filepath: str) -> dict:
             "json_completo":   path_json,
             "graficos":        chart_paths,
         }
+        result["summary"] = summary
+
+
 
         result["_descriptive_df"] = descriptive_df
         result["_hypothesis_df"]  = hypothesis_df
@@ -212,6 +215,8 @@ def print_final_summary(results: list[dict]) -> None:
                     print(f"     🖼️  Gráficos: {len(v)} arquivo(s)")
                 else:
                     print(f"     📄 {k}: {os.path.basename(v)}")
+            if "planilha_url" in r:
+                print(f"     📊 Google Sheets: {r['planilha_url']}")
         elif r["erro"]:
             print(f"  ❗ Erro: {r['erro']}")
 
@@ -311,10 +316,77 @@ Exemplos:
 
     print_final_summary(all_results)
 
+    gemini_results = []
     if args.gemini:
-        _run_gemini_reports(all_results, args)
+        gemini_results = _run_gemini_reports(all_results, args)
 
-def _run_gemini_reports(pipeline_results: list[dict], args) -> None:
+    # --- INTEGRAÇÃO GOOGLE SHEETS & GOOGLE DRIVE ---
+    from datetime import datetime
+    credentials_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if credentials_path:
+        try:
+            from src.gsheets_logger import log_test_result, upload_pdf_to_drive
+            
+            for r in all_results:
+                if not r["sucesso"] or "summary" not in r:
+                    continue
+                
+                summary = r["summary"]
+                parceiro = r["parceiro"]
+                
+                pdf_link = ""
+                # Verifica se há PDF gerado para esse parceiro no gemini_results
+                pdf_path = ""
+                if gemini_results:
+                    for gr in gemini_results:
+                        if gr["parceiro"] == parceiro:
+                            pdf_path = gr.get("outputs", {}).get("relatorio_pdf", "")
+                            break
+                
+                if pdf_path and os.getenv("GOOGLE_DRIVE_FOLDER_ID"):
+                    pdf_link = upload_pdf_to_drive(pdf_path, credentials_path)
+                
+                grupo_controle = summary.get("metadata", {}).get("grupo_controle", "Grupo 1")
+                vencedora = grupo_controle
+                resultado_estatistico = "Nenhuma variante superou o controle com significância."
+                maior_lucro_variante = -float('inf')
+                
+                for comp in summary.get("comparacoes", []):
+                    if comp.get("metrica") == "lucro":
+                        ttest_p = comp.get("ttest", {}).get("p_value", 1.0)
+                        m_var = comp.get("media_variante", 0)
+                        m_ctrl = comp.get("media_controle", 0)
+                        
+                        if ttest_p is not None and ttest_p < 0.05 and m_var > m_ctrl:
+                            if m_var > maior_lucro_variante:
+                                maior_lucro_variante = m_var
+                                vencedora = comp.get("grupo_variante")
+                                resultado_estatistico = f"{vencedora} superou {grupo_controle} (p={ttest_p:.4f})"
+                
+                decisao = f"Manter {grupo_controle}" if vencedora == grupo_controle else f"Escalar {vencedora} para 100% do tráfego"
+                
+                test_data = {
+                    "nome_teste": f"Teste A/B — {parceiro}",
+                    "descricao": "Análise automatizada de testes A/B",
+                    "periodo_inicio": summary.get("metadata", {}).get("periodo_inicio", "")[:10] if summary.get("metadata", {}).get("periodo_inicio") else "",
+                    "periodo_fim": summary.get("metadata", {}).get("periodo_fim", "")[:10] if summary.get("metadata", {}).get("periodo_fim") else "",
+                    "grupos": ", ".join(summary.get("metadata", {}).get("grupos", [])),
+                    "grupo_controle": grupo_controle,
+                    "variante_vencedora": vencedora,
+                    "resultado_estatistico": resultado_estatistico,
+                    "decisao": decisao,
+                    "data_analise": datetime.now().strftime('%d/%m/%Y'),
+                    "link_relatorio": pdf_link
+                }
+                
+                sheet_url = log_test_result(test_data, credentials_path)
+                logger.info("[%s] Registrado no Google Sheets: %s", parceiro, sheet_url)
+        except Exception as e:
+            logger.warning("Erro ao registrar no Google Sheets/Drive (ignorado): %s", e)
+    else:
+        logger.info("GOOGLE_SERVICE_ACCOUNT_JSON não configurado no .env. Pulando envio para Google Sheets.")
+
+def _run_gemini_reports(pipeline_results: list[dict], args) -> list[dict]:
     """
     Executa a geração de relatórios Gemini para todos os parceiros
     que foram processados com sucesso pelo pipeline.
@@ -340,13 +412,13 @@ def _run_gemini_reports(pipeline_results: list[dict], args) -> None:
             "   Obtenha gratuitamente em: https://aistudio.google.com/app/apikey\n"
             "   Pulando geração de relatórios Gemini."
         )
-        return
+        return []
 
     try:
         prompt_template = load_prompt_template()
     except FileNotFoundError as e:
         logger.error("❌ %s", e)
-        return
+        return []
 
     successful = [r for r in pipeline_results if r["sucesso"]]
     logger.info("Gerando relatórios Gemini para %d parceiro(s)…", len(successful))
@@ -383,6 +455,7 @@ def _run_gemini_reports(pipeline_results: list[dict], args) -> None:
             print(f"       Erro: {g['erro']}")
     print(f"\n  Total: {n_ok}/{len(gemini_results)} relatório(s) Gemini gerado(s).")
     print("━" * 68 + "\n")
+    return gemini_results
 
 if __name__ == "__main__":
     main()

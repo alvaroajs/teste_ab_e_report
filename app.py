@@ -418,6 +418,8 @@ class PipelineRunner(threading.Thread):
                 path_json = export_json_full(summary, parceiro)
                 if self.cancelled: break
 
+
+
                 self.step = 6
                 logging.info("Etapa 6/6: Consultando o Google Gemini e gerando o relatório final PDF...")
                 data_trimmed, p_json, cp_json = load_and_trim_json(path_json)
@@ -436,6 +438,56 @@ class PipelineRunner(threading.Thread):
                 pdf_path = REPORTS_DIR / pdf_filename
                 pdf_ok   = markdown_to_pdf(md_report, pdf_path, p_json)
 
+                # --- GOOGLE SHEETS LOGGING & DRIVE UPLOAD ---
+                sheet_url = None
+                credentials_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+                if credentials_path:
+                    try:
+                        from src.gsheets_logger import log_test_result, upload_pdf_to_drive
+                        from datetime import datetime
+                        
+                        pdf_link = ""
+                        if pdf_ok and os.getenv("GOOGLE_DRIVE_FOLDER_ID"):
+                            pdf_link = upload_pdf_to_drive(str(pdf_path), credentials_path)
+                        
+                        grupo_controle = summary.get("metadata", {}).get("grupo_controle", "Grupo 1")
+                        vencedora = grupo_controle
+                        resultado_estatistico = "Nenhuma variante superou o controle com significância."
+                        maior_lucro_variante = -float('inf')
+                        
+                        for comp in summary.get("comparacoes", []):
+                            if comp.get("metrica") == "lucro":
+                                ttest_p = comp.get("ttest", {}).get("p_value", 1.0)
+                                m_var = comp.get("media_variante", 0)
+                                m_ctrl = comp.get("media_controle", 0)
+                                
+                                if ttest_p is not None and ttest_p < 0.05 and m_var > m_ctrl:
+                                    if m_var > maior_lucro_variante:
+                                        maior_lucro_variante = m_var
+                                        vencedora = comp.get("grupo_variante")
+                                        resultado_estatistico = f"{vencedora} superou {grupo_controle} (p={ttest_p:.4f})"
+                        
+                        decisao = f"Manter {grupo_controle}" if vencedora == grupo_controle else f"Escalar {vencedora} para 100% do tráfego"
+                        
+                        test_data = {
+                            "nome_teste": f"Teste A/B — {parceiro}",
+                            "descricao": "Análise automatizada de testes A/B",
+                            "periodo_inicio": summary.get("metadata", {}).get("periodo_inicio", "")[:10] if summary.get("metadata", {}).get("periodo_inicio") else "",
+                            "periodo_fim": summary.get("metadata", {}).get("periodo_fim", "")[:10] if summary.get("metadata", {}).get("periodo_fim") else "",
+                            "grupos": ", ".join(summary.get("metadata", {}).get("grupos", [])),
+                            "grupo_controle": grupo_controle,
+                            "variante_vencedora": vencedora,
+                            "resultado_estatistico": resultado_estatistico,
+                            "decisao": decisao,
+                            "data_analise": datetime.now().strftime('%d/%m/%Y'),
+                            "link_relatorio": pdf_link
+                        }
+                        
+                        sheet_url = log_test_result(test_data, credentials_path)
+                        logging.info(f"Registrado no Google Sheets: {sheet_url}")
+                    except Exception as e:
+                        logging.warning(f"Erro ao registrar no Google Sheets (ignorado): {e}")
+
                 self.results.append({
                     "parceiro":  parceiro,
                     "pdf_ok":    pdf_ok,
@@ -444,6 +496,7 @@ class PipelineRunner(threading.Thread):
                     "hyp_path":  Path(path_hyp_csv),
                     "alerts":    alerts,
                     "md_report": md_report,
+                    "planilha_url": sheet_url,
                 })
 
                 if len(self.uploaded_files) > 1 and uf != self.uploaded_files[-1]:
@@ -721,6 +774,17 @@ if runner is not None and runner.completed:
 </div>
         """
         st.markdown(summary_md, unsafe_allow_html=True)
+        
+        # --- SEÇÃO DO GOOGLE SHEETS ---
+        st.markdown("#### Registro de Acompanhamento (Google Sheets)")
+        if os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"):
+            if res.get("planilha_url"):
+                st.success("✅ Teste registrado automaticamente na planilha de acompanhamento.")
+                st.link_button("Ver planilha de acompanhamento", url=res["planilha_url"], type="secondary", use_container_width=True)
+            else:
+                st.warning("⚠️ O teste não pôde ser registrado. Verifique os logs para mais detalhes.")
+        else:
+            st.info("ℹ️ **Dica:** O registro automático no Google Sheets está disponível. Configure a variável `GOOGLE_SERVICE_ACCOUNT_JSON` no seu arquivo `.env` ou nas Secrets do Streamlit.")
 
         st.divider()
 

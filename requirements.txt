@@ -20,3 +20,7 @@ weasyprint>=61.0         # HTML → PDF (melhor qualidade)
 
 # ─── Alternativa PDF (instale apenas se WeasyPrint não funcionar) ───
 # pdfkit>=1.0.0          # Requer wkhtmltopdf instalado no sistema
+
+# ─── Google Sheets ───────────────────────────────────────────────
+gspread>=6.0.0
+google-auth>=2.0.0

@@ -6,6 +6,12 @@ Edite este arquivo para personalizar caminhos, parâmetros estatísticos e metad
 """
 
 import os
+from dotenv import load_dotenv
+
+# ─────────────────────────────────────────────
+# CARREGA VARIÁVEIS DE AMBIENTE
+# ─────────────────────────────────────────────
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # DIRETÓRIOS DO PROJETO

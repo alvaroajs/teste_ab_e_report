@@ -223,6 +223,50 @@ Ao colocar a aplicação no ar na nuvem do Streamlit, adicione a sua chave de AP
 
 ---
 
+## Configurando o Google Sheets
+
+O pipeline permite registrar os resultados de cada análise automaticamente em uma planilha pública no Google Sheets ("Méliuz — Acompanhamento Testes A/B").
+
+### Passo 1 — Crie uma Service Account no Google Cloud Console
+
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/).
+2. Crie um novo projeto ou selecione um existente.
+3. No menu de navegação, vá em **APIs e Serviços** > **Biblioteca**. Pesquise por "Google Sheets API" e "Google Drive API" e ative ambas.
+4. Vá em **APIs e Serviços** > **Credenciais**.
+5. Clique em **Criar Credenciais** e selecione **Conta de Serviço (Service Account)**.
+6. Preencha os dados e conclua a criação.
+
+### Passo 2 — Baixe o JSON de credenciais
+
+1. Na lista de Service Accounts, clique na conta que você acabou de criar.
+2. Vá na aba **Chaves** (Keys).
+3. Clique em **Adicionar chave** > **Criar nova chave**.
+4. Selecione o tipo **JSON** e clique em **Criar**. O download do arquivo começará automaticamente.
+
+### Passo 3 — Configure a variável no `.env`
+
+Copie o arquivo baixado para a raiz do seu projeto (ou para um local seguro). Em seguida, no seu arquivo `.env`, adicione a seguinte variável apontando para o arquivo:
+
+```env
+GOOGLE_SERVICE_ACCOUNT_JSON=caminho/para/seu/arquivo-de-credenciais.json
+```
+
+### Passo 4 — Configuração no Streamlit Cloud (Secrets)
+
+Para uso online, em vez de subir o arquivo de credenciais (que por padrão está no `.gitignore`), você pode adicionar o JSON inteiro como uma string na variável no Streamlit Cloud.
+1. No seu app do Streamlit Cloud, vá em **Settings** > **Secrets**.
+2. Cole todo o conteúdo do JSON como uma string (uma única linha, escapando as aspas duplas, ou formatando o TOML adequadamente) para a variável correspondente:
+   ```toml
+   GOOGLE_SERVICE_ACCOUNT_JSON = '{"type": "service_account", "project_id": "..."}'
+   ```
+   > Outra alternativa suportada é criar o dicionário/json de forma embutida.
+
+### O que acontece quando não está configurado?
+
+Se a variável `GOOGLE_SERVICE_ACCOUNT_JSON` não for encontrada, o **pipeline continua normalmente** sem gerar logs de erro críticos. Apenas não será feita a inclusão da linha no Google Sheets. No aplicativo Web (Streamlit), aparecerá uma mensagem informativa lembrando da possibilidade de registrar a análise.
+
+---
+
 ## Schema dos Dados de Entrada
 
 O CSV deve ter as seguintes colunas:
