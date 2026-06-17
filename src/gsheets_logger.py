@@ -78,6 +78,17 @@ def get_credentials(credentials_path_or_json: str) -> Credentials | UserCredenti
         if info.get("type") == "service_account":
             return Credentials.from_service_account_info(info, scopes=SCOPES)
             
+        # Se for um OAuth2 token inline (ex: do Streamlit Secrets)
+        elif "refresh_token" in info and "client_id" in info:
+            logger.info("Credencial OAuth2 Token Inline detectada.")
+            inline_creds = UserCredentials.from_authorized_user_info(info, SCOPES)
+            if inline_creds and inline_creds.expired and inline_creds.refresh_token:
+                try:
+                    inline_creds.refresh(Request())
+                except Exception as e:
+                    logger.warning(f"Falha ao renovar token inline: {e}")
+            return inline_creds
+            
         # Se for OAuth2 Client Secret ("installed" ou "web")
         elif "installed" in info or "web" in info:
             logger.info("Credencial OAuth2 detectada. Abrindo navegador para autorização...")

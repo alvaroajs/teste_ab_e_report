@@ -440,8 +440,19 @@ class PipelineRunner(threading.Thread):
 
                 # --- GOOGLE SHEETS LOGGING & DRIVE UPLOAD ---
                 sheet_url = None
-                credentials_path = os.getenv("GOOGLE_CLIENT_SECRET_JSON") or os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("GOOGLE_TOKEN_JSON", "token.json")
-                if credentials_path and os.path.exists(credentials_path):
+                
+                # Suporte a Streamlit Cloud Secrets (onde arquivos físicos não existem)
+                inline_token = None
+                try:
+                    import streamlit as st
+                    if "GOOGLE_TOKEN_JSON_INLINE" in st.secrets:
+                        inline_token = st.secrets["GOOGLE_TOKEN_JSON_INLINE"]
+                except Exception:
+                    pass
+                
+                credentials_path = inline_token or os.getenv("GOOGLE_CLIENT_SECRET_JSON") or os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("GOOGLE_TOKEN_JSON", "token.json")
+                
+                if credentials_path and (credentials_path.startswith("{") or os.path.exists(credentials_path)):
                     try:
                         from src.gsheets_logger import log_test_result, upload_pdf_to_drive
                         from datetime import datetime
