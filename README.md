@@ -6,7 +6,9 @@ Este projeto é um pipeline completo que automatiza a análise estatística de t
 
 Se você quiser ver o projeto funcionando de imediato, sem precisar instalar ou rodar código localmente, acesse os links abaixo:
 
+  > **Essa etapa pode demorar um pouco, a depender seja necessário que o Stremlit reinicie o servidor**
 - 🌐 **Aplicação Web (Streamlit):** [https://reportt.streamlit.app/](https://reportt.streamlit.app/)
+
 - 📊 **Planilha de Acompanhamento (Google Sheets):** [Acessar Planilha](https://docs.google.com/spreadsheets/d/16mc0DiY_T4XXVXHuKi_ui82lbvDVAamtnTUt3mGWqQU/edit?gid=0#gid=0)
 - 📁 **Arquivos Gerados (Google Drive):** [Ver Relatórios PDF](https://drive.google.com/drive/folders/1Rwafm-vzCGXtpKbYVLjxNkNWj2nQPAxf?hl=pt-br)
 
