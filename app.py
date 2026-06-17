@@ -774,7 +774,7 @@ if runner is not None and runner.completed:
                 
                 with st.container():
                     st.markdown("<br>", unsafe_allow_html=True)
-                    st.info("💡 **Preview do Relatório:** Abaixo está a visualização do PDF gerado.", icon="👀")
+                    st.info(" **Preview do Relatório:** ")
                     # Largura ajustada para 700 para caber perfeitamente no container padrão do Streamlit
                     pdf_viewer(str(res["pdf_path"]), width=700, height=900)
             except ImportError:
