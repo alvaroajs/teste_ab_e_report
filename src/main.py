@@ -322,8 +322,8 @@ Exemplos:
 
     # --- INTEGRAÇÃO GOOGLE SHEETS & GOOGLE DRIVE ---
     from datetime import datetime
-    credentials_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-    if credentials_path:
+    credentials_path = os.getenv("GOOGLE_CLIENT_SECRET_JSON") or os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("GOOGLE_TOKEN_JSON", "token.json")
+    if credentials_path and os.path.exists(credentials_path):
         try:
             from src.gsheets_logger import log_test_result, upload_pdf_to_drive
             

@@ -6,6 +6,9 @@ from google.oauth2.service_account import Credentials
 import gspread
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials as UserCredentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 logger = logging.getLogger(__name__)
 
@@ -33,20 +36,68 @@ HEADERS = [
     "Decisão"
 ]
 
-def get_credentials(credentials_path_or_json: str) -> Credentials:
+def get_credentials(credentials_path_or_json: str) -> Credentials | UserCredentials:
     """
     Carrega as credenciais a partir de um arquivo JSON ou string JSON.
+    Suporta tanto Service Account quanto OAuth2 Client Secret (usuário).
     """
     try:
+        # Se for um OAuth2 token já salvo (prioridade para não abrir o browser)
+        token_path = os.getenv("GOOGLE_TOKEN_JSON", "token.json")
+        creds = None
+        if os.path.exists(token_path):
+            with open(token_path, "r") as token:
+                creds = UserCredentials.from_authorized_user_info(json.load(token), SCOPES)
+        
+        # Se as credenciais do token são válidas, retorna elas
+        if creds and creds.valid:
+            return creds
+            
+        # Se as credenciais do token expiraram e há um refresh token, tenta renovar
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                with open(token_path, "w") as token:
+                    token.write(creds.to_json())
+                return creds
+            except Exception as refresh_error:
+                logger.warning(f"Erro ao renovar token OAuth2 (pedindo novo login): {refresh_error}")
+                creds = None
+        
+        # Se não há token válido, lê o JSON fornecido (que pode ser SA ou Client Secret)
+        info = None
         if credentials_path_or_json.strip().startswith("{"):
-            # É um JSON embutido na string
             info = json.loads(credentials_path_or_json)
-            return Credentials.from_service_account_info(info, scopes=SCOPES)
         else:
-            # É um caminho de arquivo
             if not os.path.isfile(credentials_path_or_json):
                 raise FileNotFoundError(f"Arquivo de credenciais não encontrado: {credentials_path_or_json}")
-            return Credentials.from_service_account_file(credentials_path_or_json, scopes=SCOPES)
+            with open(credentials_path_or_json, "r") as f:
+                info = json.load(f)
+                
+        # Se for Service Account
+        if info.get("type") == "service_account":
+            return Credentials.from_service_account_info(info, scopes=SCOPES)
+            
+        # Se for OAuth2 Client Secret ("installed" ou "web")
+        elif "installed" in info or "web" in info:
+            logger.info("Credencial OAuth2 detectada. Abrindo navegador para autorização...")
+            if credentials_path_or_json.strip().startswith("{"):
+                flow = InstalledAppFlow.from_client_config(info, SCOPES)
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(credentials_path_or_json, SCOPES)
+            
+            # Porta 0 escolhe uma porta livre automaticamente
+            creds = flow.run_local_server(port=0)
+            
+            # Salva para as próximas vezes
+            with open(token_path, "w") as token:
+                token.write(creds.to_json())
+            logger.info(f"Login bem sucedido! Token salvo em {token_path}")
+            return creds
+            
+        else:
+            raise ValueError("Formato de JSON de credencial desconhecido.")
+            
     except Exception as e:
         logger.error(f"Erro ao carregar credenciais do Google: {e}")
         raise

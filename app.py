@@ -440,8 +440,8 @@ class PipelineRunner(threading.Thread):
 
                 # --- GOOGLE SHEETS LOGGING & DRIVE UPLOAD ---
                 sheet_url = None
-                credentials_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-                if credentials_path:
+                credentials_path = os.getenv("GOOGLE_CLIENT_SECRET_JSON") or os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("GOOGLE_TOKEN_JSON", "token.json")
+                if credentials_path and os.path.exists(credentials_path):
                     try:
                         from src.gsheets_logger import log_test_result, upload_pdf_to_drive
                         from datetime import datetime
