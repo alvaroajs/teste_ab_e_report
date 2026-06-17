@@ -50,10 +50,12 @@ pip install -r requirements.txt
 
 O projeto precisa se comunicar com a IA do Google para redigir o relatório, além de utilizar as credenciais para acessar o Google Sheets e Google Drive. Crie um arquivo chamado `.env` na raiz do repositório e adicione suas credenciais da seguinte forma:
 
-```env
-GEMINI_API_KEY=sua_chave_aqui <------------------------
+> **Dica:** Você pode gerar a sua `GEMINI_API_KEY` gratuitamente acessando o [Google AI Studio](https://aistudio.google.com/app/apikey).
 
-# Credenciais e configurações do Google Workspace coloque desse jeito
+```env
+GEMINI_API_KEY=sua_chave_aqui
+
+# Credenciais e configurações do Google Workspace
 GOOGLE_SERVICE_ACCOUNT_JSON=credenciais.json
 GOOGLE_DRIVE_FOLDER_ID=1Rwafm-vzCGXtpKbYVLjxNkNWj2nQPAxf
 GOOGLE_CLIENT_SECRET_JSON=client_secret.json
