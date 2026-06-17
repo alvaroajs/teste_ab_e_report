@@ -471,6 +471,8 @@ class PipelineRunner(threading.Thread):
                             # Para forçar o gsheets_logger a enxergar, jogamos pro os.environ
                             os.environ["GOOGLE_DRIVE_FOLDER_ID"] = folder_id
                             pdf_link = upload_pdf_to_drive(str(pdf_path), credentials_path)
+                        elif not pdf_ok:
+                            self.log("⚠️ Erro: Falha ao gerar PDF localmente. O upload para o Google Drive foi cancelado.")
                         
                         grupo_controle = summary.get("metadata", {}).get("grupo_controle", "Grupo 1")
                         vencedora = grupo_controle
@@ -508,7 +510,8 @@ class PipelineRunner(threading.Thread):
                         sheet_url = log_test_result(test_data, credentials_path)
                         logging.info(f"Registrado no Google Sheets: {sheet_url}")
                     except Exception as e:
-                        logging.warning(f"Erro ao registrar no Google Sheets (ignorado): {e}")
+                        logging.warning(f"Erro ao registrar no Google Sheets/Drive: {e}")
+                        self.log(f"❌ Erro ao salvar na nuvem: {e}")
 
                 self.results.append({
                     "parceiro":  parceiro,
